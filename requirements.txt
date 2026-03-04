@@ -1,0 +1,7 @@
+# Dashcam Forward Collision Warning - Dependencies
+# Python 3.8+
+
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+# playsound>=1.3.0  # Opsional: untuk alert.wav. Di Windows bisa pakai winsound (bawaan).
