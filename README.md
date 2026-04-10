@@ -42,6 +42,14 @@ Display Output (FPS + Status)
 
 ---
 
+## Workflow Visual
+
+<p align="center">
+  <img src="documentary/workflow.png" width="700"/>
+</p>
+
+---
+
 ## Cara Install
 
 1. **Clone atau download** proyek ini.
@@ -85,6 +93,8 @@ DashcamYOLO/
 │   ├── collision_logic.py# Area, delta area, status SAFE/CAUTION/WARNING
 │   ├── alert.py          # Gambar bbox, teks status, warning, sound
 │   └── config.py         # Threshold, cooldown, resolusi, class, warna
+├── documentary/
+│   └── workflow.png      # Diagram alur sistem
 ├── assets/
 │   └── sounds/
 │       └── alert.wav     # (opsional) file suara peringatan
