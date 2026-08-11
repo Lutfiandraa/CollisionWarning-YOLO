@@ -2,10 +2,9 @@
 Modul alert: gambar bounding box, teks status, warning visual, dan optional sound.
 """
 
-import os
 import threading
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -29,23 +28,68 @@ def draw_bounding_boxes(
     thickness: int = 2,
 ) -> np.ndarray:
     """
-    Menggambar bounding box di frame. Warna sesuai status (WARNING = merah).
+    Menggambar bounding box untuk setiap VehicleState di frame.
+
+    Box selalu ditampilkan untuk semua status (SAFE, CAUTION, WARNING)
+    dengan warna sesuai status masing-masing kendaraan. Di atas setiap
+    box ditampilkan 2 baris label: ID track dan estimasi jarak.
     """
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    label_scale = 0.45
+    label_thickness = 1
+    line_gap = 14  # jarak antar baris label dalam piksel
+
     for state in states:
-        x1, y1, x2, y2 = state.detection.bbox
+        x1, y1, x2, y2 = state.tracked.bbox
+        
+        # Defense in depth: validasi ukuran bbox dan batas frame
+        if x2 <= x1 or y2 <= y1:
+            continue
+        h, w = frame.shape[:2]
+        if x1 < 0 or y1 < 0 or x2 > w or y2 > h:
+            continue
+
         color = get_color_for_status(state.status)
+
+        # Gambar bounding box
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
-        label = f"{state.detection.class_name} {state.detection.confidence:.1%}"
+
+        # Baris 1 (paling atas): nama class + confidence
+        class_label = f"{state.tracked.class_name} {state.tracked.confidence:.1%}"
         cv2.putText(
             frame,
-            label,
-            (x1, y1 - 6),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
+            class_label,
+            (x1, max(y1 - line_gap * 2, line_gap)),
+            font,
+            label_scale,
             color,
-            1,
-            cv2.LINE_AA,
+            label_thickness,
         )
+
+        # Baris 2: track ID
+        id_label = f"ID: {state.track_id}"
+        cv2.putText(
+            frame,
+            id_label,
+            (x1, max(y1 - line_gap, 1)),
+            font,
+            label_scale,
+            color,
+            label_thickness,
+        )
+
+        # Baris 3 (tepat di atas box): estimasi jarak
+        dist_label = f"{state.distance_m:.1f}m"
+        cv2.putText(
+            frame,
+            dist_label,
+            (x1, max(y1 - 4, 1)),
+            font,
+            label_scale,
+            color,
+            label_thickness,
+        )
+
     return frame
 
 

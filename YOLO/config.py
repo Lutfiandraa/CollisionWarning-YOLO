@@ -33,7 +33,6 @@ VEHICLE_CLASS_NAMES: List[str] = ["car", "motorcycle", "bus", "truck"]
 # Area kecil = objek jauh, area besar = objek dekat
 # Frame 640x480 = 307200 px²; mobil mengisi ~30%+ ≈ 90000+ px²
 # =============================================================================
-AREA_SAFE_MAX: float = 25000.0      # Di bawah ini = SAFE (objek masih jauh)
 AREA_CAUTION_MIN: float = 25000.0   # Mulai waspada
 AREA_CAUTION_MAX: float = 80000.0   # Batas CAUTION; di atas = sangat dekat
 # Di atas AREA_CAUTION_MAX = area besar → berpotensi WARNING jika delta tinggi
@@ -46,6 +45,20 @@ AREA_WARNING_DIRECT: float = 100000.0  # Area di atas ini = WARNING (objek sanga
 DELTA_SAFE_MAX: float = 3000.0      # Perubahan kecil = aman
 DELTA_CAUTION_MIN: float = 3000.0   # Mulai waspada
 DELTA_WARNING_MIN: float = 8000.0   # Peningkatan cepat = WARNING
+
+# =============================================================================
+# ESTIMASI JARAK (Pinhole Camera Model / Monocular)
+# =============================================================================
+# Asumsi panjang fokal dalam piksel untuk webcam/dashcam umum.
+# TIDAK dikalibrasi secara presisi. Untuk estimasi jarak yang akurat,
+# lakukan kalibrasi manual: letakkan objek dengan lebar diketahui pada
+# jarak tertentu, ukur lebar pikselnya, lalu hitung:
+#   focal_length = (lebar_piksel * jarak_nyata) / lebar_nyata
+FOCAL_LENGTH_PX: float = 700.0
+
+# Rata-rata lebar mobil penumpang dalam meter, dipakai sebagai asumsi
+# default untuk estimasi jarak.
+DEFAULT_VEHICLE_WIDTH_M: float = 1.8
 
 # =============================================================================
 # ALERT & COOLDOWN
@@ -64,8 +77,3 @@ COLOR_SAFE: Tuple[int, int, int] = (0, 255, 0)    # Hijau
 COLOR_CAUTION: Tuple[int, int, int] = (0, 255, 255)  # Kuning
 COLOR_WARNING: Tuple[int, int, int] = (0, 0, 255)  # Merah
 
-# =============================================================================
-# FPS & STABILITY
-# =============================================================================
-TARGET_FPS: int = 30
-MIN_DETECTIONS_FOR_DELTA: int = 1  # Minimal deteksi untuk hitung delta

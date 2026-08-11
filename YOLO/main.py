@@ -6,15 +6,16 @@ Dashcam FCW berbasis YOLOv8n dan OpenCV - untuk penelitian/skripsi.
 import sys
 import time
 from pathlib import Path
+from typing import Dict
 
 import cv2
-import numpy as np
 
 # Pastikan parent folder ada di path untuk import
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import config
 from detector import VehicleDetector
+from tracker import VehicleTracker
 from collision_logic import analyze_detections, get_previous_areas_from_states, CollisionStatus
 from alert import apply_alert_visuals, play_alert_sound
 
@@ -33,12 +34,13 @@ def open_camera() -> cv2.VideoCapture:
 
 
 def run() -> None:
-    """Loop utama: capture -> detect -> collision logic -> alert -> display."""
+    """Loop utama: capture -> detect -> track -> collision logic -> alert -> display."""
     cap = open_camera()
     detector = VehicleDetector()
     detector.load_model()
+    tracker = VehicleTracker()  # Dibuat sekali di luar loop — penting untuk state tracking
 
-    previous_areas: list = []
+    previous_areas: Dict[int, float] = {}  # {track_id: area} dari frame sebelumnya
     last_warning_time: float = 0.0
     last_non_safe_time: float = 0.0  # Terakhir kali status WARNING/CAUTION
     display_status = CollisionStatus.SAFE  # Status yang ditampilkan (dengan persistensi)
@@ -56,9 +58,18 @@ def run() -> None:
                 print("Gagal membaca frame.")
                 break
 
-            # Deteksi kendaraan
+            # 1. Deteksi kendaraan → List[Detection]
             detections = detector.detect(frame)
-            states, status = analyze_detections(detections, previous_areas)
+
+            # 2. Tracking → List[TrackedVehicle] dengan track_id stabil antar frame
+            tracked_vehicles = tracker.update(detections, frame=frame)
+
+            # 3. Analisis collision berbasis track_id (delta area per objek, bukan per index)
+            states, status = analyze_detections(
+                tracked_vehicles,
+                previous_areas,
+                focal_length_px=config.FOCAL_LENGTH_PX,
+            )
             previous_areas = get_previous_areas_from_states(states)
 
             now = time.perf_counter()
@@ -68,9 +79,7 @@ def run() -> None:
             if status in (CollisionStatus.WARNING, CollisionStatus.CAUTION):
                 display_status = status
                 last_non_safe_time = now
-            elif (now - last_non_safe_time) < getattr(
-                config, "ALERT_PERSISTENCE_SECONDS", 2.5
-            ):
+            elif (now - last_non_safe_time) < config.ALERT_PERSISTENCE_SECONDS:
                 # Masih dalam jangka persistensi, pertahankan status terakhir
                 pass
             else:
